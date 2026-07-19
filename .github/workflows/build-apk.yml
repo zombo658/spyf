@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -36,9 +36,19 @@ jobs:
           mkdir -p out
           cp app/build/outputs/apk/debug/app-debug.apk out/GeoWalker-debug.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: GeoWalker-debug-apk
           path: out/GeoWalker-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: GeoWalker (последний debug-APK)
+          body: |
+            Свежая debug-сборка GeoWalker. Скачай GeoWalker-debug.apk на телефон и установи
+            (разреши установку из этого источника). Обновляется автоматически при каждом пуше.
+          files: out/GeoWalker-debug.apk
