@@ -1,0 +1,9 @@
+# Скопируй этот файл в local.properties и подставь свои значения.
+# local.properties в git не коммитится (см. .gitignore).
+
+# Путь к Android SDK (Android Studio обычно проставляет сам).
+sdk.dir=/path/to/Android/Sdk
+
+# Ключ Yandex MapKit. Получить бесплатно:
+# https://developer.tech.yandex.ru/services/  -> MapKit Mobile SDK
+YANDEX_MAPKIT_API_KEY=PUT_YOUR_KEY_HERE
