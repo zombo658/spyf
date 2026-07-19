@@ -23,10 +23,41 @@
             android:orientation="vertical"
             android:padding="12dp">
 
+            <TextView
+                android:id="@+id/helpBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#E3F2FD"
+                android:padding="10dp"
+                android:textSize="13sp"
+                android:lineSpacingExtra="2dp"
+                android:text="Как пользоваться:\n1. 📍 Найди себя на карте.\n2. Тапай по карте — ставь подъезды по порядку.\n3. Задай интервал и тайминг.\n4. Включи GeoWalker в фиктивных местоположениях (кнопка ниже).\n5. Нажми СТАРТ — приложение само «пройдёт» подъезды." />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                android:paddingTop="8dp">
+
+                <Button
+                    android:id="@+id/findMeBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📍 Найти себя" />
+
+                <Button
+                    android:id="@+id/helpBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="❓ Помощь" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingTop="8dp">
 
                 <Button
                     android:id="@+id/addModeBtn"
@@ -116,7 +147,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Настройки разработчика (mock location)" />
+                android:text="⚙️ Включить в фиктивных местоположениях" />
 
             <LinearLayout
                 android:layout_width="match_parent"

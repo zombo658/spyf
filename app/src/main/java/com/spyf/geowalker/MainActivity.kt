@@ -7,15 +7,19 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.spyf.geowalker.databinding.ActivityMainBinding
+import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.geometry.Polyline
@@ -23,6 +27,7 @@ import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.InputListener
 import com.yandex.mapkit.map.Map
 import com.yandex.mapkit.map.MapObjectCollection
+import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.runtime.image.ImageProvider
 
 class MainActivity : AppCompatActivity() {
@@ -34,6 +39,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var map: Map
     private var objects: MapObjectCollection? = null
+    private var userLocationLayer: UserLocationLayer? = null
     private var addMode = true
     private var nextId = 1L
 
@@ -80,6 +86,13 @@ class MainActivity : AppCompatActivity() {
 
         map = binding.mapview.mapWindow.map
         objects = map.mapObjects.addCollection()
+
+        // Слой реального местоположения — синяя точка «ты» на карте.
+        userLocationLayer = MapKitFactory.getInstance()
+            .createUserLocationLayer(binding.mapview.mapWindow).apply {
+                setVisible(true)
+                isHeadingEnabled = true
+            }
 
         // Стартовая камера — Москва, если своих точек ещё нет.
         val start = route.waypoints.firstOrNull()
@@ -129,6 +142,72 @@ class MainActivity : AppCompatActivity() {
         binding.startBtn.setOnClickListener { startRun() }
         binding.stopBtn.setOnClickListener { stopRun() }
         binding.devSettingsBtn.setOnClickListener { openDevSettings() }
+        binding.findMeBtn.setOnClickListener { findMe() }
+        binding.helpBtn.setOnClickListener { showHelp() }
+    }
+
+    /** Центрирует карту на реальном местоположении пользователя. */
+    private fun findMe() {
+        if (!hasLocationPermission()) {
+            requestPermissions()
+            Toast.makeText(this, "Разреши доступ к геолокации и нажми ещё раз", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val fromLayer = userLocationLayer?.cameraPosition()?.target
+        if (fromLayer != null) {
+            moveTo(fromLayer)
+            return
+        }
+        val last = lastKnownLocation()
+        if (last != null) {
+            moveTo(Point(last.latitude, last.longitude))
+        } else {
+            Toast.makeText(this, "Ищу местоположение… включи GPS и попробуй через пару секунд", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun moveTo(p: Point) {
+        map.move(CameraPosition(p, 16.5f, 0f, 0f), Animation(Animation.Type.SMOOTH, 0.4f), null)
+    }
+
+    private fun lastKnownLocation(): Location? {
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return listOf(
+            LocationManager.GPS_PROVIDER,
+            LocationManager.NETWORK_PROVIDER,
+            LocationManager.PASSIVE_PROVIDER
+        ).mapNotNull { p -> runCatching { lm.getLastKnownLocation(p) }.getOrNull() }
+            .maxByOrNull { it.time }
+    }
+
+    private fun hasLocationPermission() =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    private fun showHelp() {
+        AlertDialog.Builder(this)
+            .setTitle("Как это работает")
+            .setMessage(
+                "GeoWalker подменяет твой GPS и «проводит» тебя по маршруту из подъездов " +
+                    "по заданному времени.\n\n" +
+                    "ПОДГОТОВКА (один раз):\n" +
+                    "1. Включи «Для разработчиков»: Настройки → О телефоне → 7 раз тапни " +
+                    "по «Номер сборки».\n" +
+                    "2. Нажми «⚙️ Включить в фиктивных местоположениях» и выбери там GeoWalker.\n\n" +
+                    "МАРШРУТ:\n" +
+                    "• «📍 Найти себя» — карта прыгнет на твоё место (синяя точка).\n" +
+                    "• Тапай по карте — ставишь подъезды по порядку, между ними рисуется линия.\n" +
+                    "• «Интервал» — сколько минут идти от подъезда к подъезду.\n" +
+                    "• «Стоянка» — сколько секунд «стоять» у подъезда.\n" +
+                    "• «Старт» — сразу или в заданное время. «По кругу» — повторять маршрут.\n\n" +
+                    "ЗАПУСК:\n" +
+                    "• «СТАРТ» — фейковый GPS поедет по маршруту (работает и в фоне).\n" +
+                    "• «СТОП» — остановить.\n\n" +
+                    "Если при старте пишет, что нет прав mock location — значит GeoWalker " +
+                    "не выбран в фиктивных местоположениях (шаг 2)."
+            )
+            .setPositiveButton("Понятно", null)
+            .show()
     }
 
     private fun updateAddModeLabel() {
