@@ -34,8 +34,19 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var map: Map
     private var objects: MapObjectCollection? = null
-    private var addMode = false
+    private var addMode = true
     private var nextId = 1L
+
+    // ВАЖНО: MapKit держит слушатели по слабой ссылке, поэтому его нужно
+    // хранить в поле, иначе GC его удалит и тапы перестанут ловиться.
+    private val inputListener = object : InputListener {
+        override fun onMapTap(map: Map, point: Point) {
+            if (addMode) addWaypoint(point.latitude, point.longitude)
+        }
+        override fun onMapLongTap(map: Map, point: Point) {
+            addWaypoint(point.latitude, point.longitude)
+        }
+    }
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) {
@@ -75,14 +86,7 @@ class MainActivity : AppCompatActivity() {
         val center = if (start != null) Point(start.lat, start.lon) else Point(55.751244, 37.618423)
         map.move(CameraPosition(center, 15f, 0f, 0f))
 
-        map.addInputListener(object : InputListener {
-            override fun onMapTap(m: Map, p: Point) {
-                if (addMode) addWaypoint(p.latitude, p.longitude)
-            }
-            override fun onMapLongTap(m: Map, p: Point) {
-                addWaypoint(p.latitude, p.longitude)
-            }
-        })
+        map.addInputListener(inputListener)
 
         setupUi()
         requestPermissions()
@@ -102,11 +106,12 @@ class MainActivity : AppCompatActivity() {
         binding.dwellInput.setText(defaultDwell().toString())
         binding.loopSwitch.isChecked = route.loop
         updateStartLabel()
+        updateAddModeLabel()
 
         binding.addModeBtn.setOnClickListener {
             addMode = !addMode
-            binding.addModeBtn.text = if (addMode) "Режим добавления: ВКЛ" else "Добавлять подъезды"
-            Toast.makeText(this, if (addMode) "Тапай по карте, чтобы ставить подъезды" else "Режим выключен", Toast.LENGTH_SHORT).show()
+            updateAddModeLabel()
+            Toast.makeText(this, if (addMode) "Тапай по карте, чтобы ставить подъезды" else "Добавление выключено", Toast.LENGTH_SHORT).show()
         }
 
         binding.clearBtn.setOnClickListener {
@@ -124,6 +129,10 @@ class MainActivity : AppCompatActivity() {
         binding.startBtn.setOnClickListener { startRun() }
         binding.stopBtn.setOnClickListener { stopRun() }
         binding.devSettingsBtn.setOnClickListener { openDevSettings() }
+    }
+
+    private fun updateAddModeLabel() {
+        binding.addModeBtn.text = if (addMode) "Добавление ВКЛ (тапай по карте)" else "Добавление ВЫКЛ"
     }
 
     private fun defaultDwell(): Int = route.waypoints.firstOrNull()?.dwellSec ?: 20
